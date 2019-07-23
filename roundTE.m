@@ -2,7 +2,7 @@
 function [xOut,yOut] = roundTE(x,y,r, beta)
 
   % Extract points at pressure and suction side  (excluding airfoil tip)
-  [_,iLE] = min(x);
+  [~,iLE] = min(x);
   suctionSideX = x(iLE:end-1); 
   suctionSideY = y(iLE:end-1);
   pressureSideX = x(1:iLE-1);
@@ -86,7 +86,7 @@ function [xOut,yOut] = roundTE(x,y,r, beta)
   yInterp = pchip(s, yy, sInterp);   
   
   % Append interpolated data to geometry 
-  [_,iTE] = max(xInterp); 
+  [~,iTE] = max(xInterp); 
   
   xOut = [ xInterp(iTE:-1:1)'; ...
     pressureSideX( pressureSideX <= 0.95 ); ...

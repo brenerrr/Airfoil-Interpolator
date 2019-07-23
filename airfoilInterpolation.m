@@ -9,23 +9,23 @@ clc
 %% User inputs  
 filename = 'sd7003.dat'; 
 isClockWise = false;         % Points distribution direction 
-startsFromTE =  true;                   
+startsFromTE =  true;        % true if coordinates start from trailing edge               
 nOut = 441;                  % Final number of points
-percentageSuctionSide = 0.7; % Percentage of points in the refined part of airfoildsMinTE = 0.0001;
+percentageSuctionSide = 0.7; % Percentage of points in the suction side surface;
 dsMinLE = 0.0010;            % Minimum distance between points at leading edge
-dsMinTE = 0.0001;            % Minimum distance between points at trailing edge
+dsMinTE = 0.00001;           % Minimum distance between points at trailing edge
 xStartCoarse = 0.99;         % Where to start distribution coarsening 
-xEndCoarse = 0.00001;         % Where to end distribution coarsening
+xEndCoarse = 0.00001;        % Where to end distribution coarsening
 roundFlag = true;            % true if one desires to round trailing edge
-rTE = 0.0008;                 % Trailing edge radius (in chord's length) - only required when rounding 
+rTE = 0.0008;                % Trailing edge radius (in chord's length) - only required when rounding 
 tip = 1;                     % Higher values stretch trailing edge making it become a tip. Default = 1
 openTE = false;              % true for airfoils without closed trailing edges
 
 % Increase these coefficients to concentrate more points in that region (default=1)
 alphaTE = 2;
 alphaLE = 2;
-alphaCoarse = 1;
-alphaRefined = 1;
+alphaPressureSide = 1;
+alphaSuctionSide = 1;
 
 % ******************************************************************************
 % ******************************************************************************
@@ -89,21 +89,21 @@ coordCoarse(:,1) = coordCoarse(:,1) - coordCoarse(iLE,1);
 coordCoarse = coordCoarse / coordCoarse(1,1);
 
 % Rounding
-if (roundFlag = true)
+if (roundFlag == true)
   
   nInt = 20001; % Number of points when interpolating airfoil surface 
   
   % Add more points to surface to facilitate rounding later 
-  [xOut, yOut, sOut, _] = interpolateSurface ( ...
+  [xOut, yOut, ~, ~] = interpolateSurface ( ...
                                 coordCoarse(:,1), coordCoarse(:,2), nInt, 0.000025, ...
                                 0.000025, round(nInt*0.5), 0.99, xEndCoarse, alphaTE,...
-                                alphaLE, alphaCoarse, alphaRefined );
+                                alphaLE, alphaPressureSide, alphaSuctionSide );
                         
   % Do it again to make sure everything is smooth                              
-  [xOut, yOut, sOut, dsOut] = interpolateSurface ( ...
+  [xOut, yOut, ~, ~] = interpolateSurface ( ...
                               xOut, yOut, nInt, 0.000025, ...
                               0.000025, round(nInt*0.5), 0.99, xEndCoarse, alphaTE,...
-                              alphaLE, alphaCoarse, alphaRefined );
+                              alphaLE, alphaPressureSide, alphaSuctionSide );
                   
                                       
   % Round trailing edge 
@@ -118,16 +118,16 @@ xOut = xOut / xOut(1);
 yOut = yOut / xOut(1);
 
 % Distribute points through surface 
-[xOut, yOut, sOut, dsOut] = interpolateSurface ( ...
+[xOut, yOut, ~, ~] = interpolateSurface ( ...
                                 xOut, yOut, nOut, dsMinTE, ...
                                 dsMinLE, nCoarse, xStartCoarse, xEndCoarse, alphaTE,...
-                                alphaLE, alphaCoarse, alphaRefined );
+                                alphaLE, alphaPressureSide, alphaSuctionSide );
 
 % Do it again to make sure everything is smooth
 [xOut, yOut, sOut, dsOut] = interpolateSurface ( ...
                                 xOut, yOut, nOut, dsMinTE, ...
                                 dsMinLE, nCoarse, xStartCoarse, xEndCoarse, alphaTE,...
-                                alphaLE, alphaCoarse, alphaRefined );                                
+                                alphaLE, alphaPressureSide, alphaSuctionSide );                                
 
 % Normalize 
 [~,iLE] = min(xOut(:,1));
@@ -139,40 +139,59 @@ yOut = yOut / xOut(1);
 % Airfoil 
 figure(1);
 hold on 
-plot(coordCoarse(:,1),coordCoarse(:,2),'bo-')   
-plot(xOut,yOut,'ro--','MarkerFaceColor','r','MarkerSize',4)    
+plot(coordCoarse(:,1),coordCoarse(:,2),'bo-','MarkerSize',10)   
+plot(xOut,yOut,'ro--','MarkerFaceColor','r','MarkerSize',2)    
 axis([0, 1, -0.5, 0.5])   
 pbaspect([1 1 1])
 grid on 
 legend('Original data', 'Interpolated data') 
+%set(findall(gcf,'-property','FontSize'),'FontSize',20)
+set(gcf,'Color','white')
+set(gcf, 'Position',  [100, 100, 800, 800])
+%export_fig airfoil.png 
 
 % X distribution
 figure(2)
 plot(sOut,xOut,'-o')
 hold on
-title('Distribution function of x-coordinates')
-xlabel('s')
-ylabel('x-coordinates')
+xlabel('s','FontSize',20)
+ylabel('x','FontSize',20)
+%set(findall(gcf,'-property','FontSize'),'FontSize',20)
+set(gcf,'Color','white')
+set(gcf, 'Position',  [100, 100, 800, 800])
+%export_fig x_distribution.png
 
 % Y distribution
 figure(3)
 plot(sOut,yOut,'-o')
 hold on
-title('Distribution function of y-coordinates')
 xlabel('s')
-ylabel('y-coordinates')
+ylabel('y')
+%set(findall(gcf,'-property','FontSize'),'FontSize',20)
+set(gcf,'Color','white')
+set(gcf, 'Position',  [100, 100, 800, 800])
+%export_fig y_distribution.png
 
 figure(4)
 plot(sOut(2:end),dsOut,'-o') 
 hold on 
 xlabel('s')
 ylabel('ds')
+%set(findall(gcf,'-property','FontSize'),'FontSize',20)
+set(gcf,'Color','white')
+set(gcf, 'Position',  [100, 100, 800, 800])
+%export_fig ds.png
 
 figure(5)
 plot(sOut,'-o') 
 hold on 
-xlabel('Index')
+xlabel('Index','fontsize',18)
 ylabel('s')
+%set(findall(gcf,'-property','FontSize'),'FontSize',20)
+set(gcf,'Color','white')
+set(gcf, 'Position',  [100, 100, 800, 800])
+%export_fig s.png
+
 
 % Make output array start from leading edge and follow clock wise
 % distribution

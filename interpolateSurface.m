@@ -15,12 +15,12 @@ function [xOut,yOut, sOut, dsOut] = interpolateSurface ( ...
   i = 0;
   dsMax = 0.1;
   while true 
-    i +=1;
-    if mod(nCoarse-1,2) != 0 
+    i = i + 1;
+    if mod(nCoarse-1,2) ~= 0 
       ds1 = tanhDistribution(dsMinTE, dsMax, (nCoarse-1)/2+1, alphaTE, alphaCoarse);  
     else
       ds1 = tanhDistribution(dsMinTE, dsMax, (nCoarse-1)/2, alphaTE, alphaCoarse);
-    endif
+    end
     ds2 = tanhDistribution(dsMinLE, dsMax, (nCoarse-1)/2, alphaLE, alphaCoarse);     
     ds = [ds1, ds2(end:-1:1)];
     
@@ -29,14 +29,14 @@ function [xOut,yOut, sOut, dsOut] = interpolateSurface ( ...
       previousDsMax = dsMax; 
       previousF = sum(ds) - dsCoarseSum;      
       dsMax = dsMax*0.9; 
-      if mod((nCoarse-1),2) != 0 
+      if mod((nCoarse-1),2) ~= 0 
         ds1 = tanhDistribution(dsMinTE, dsMax, (nCoarse-1)/2+1, alphaTE, alphaCoarse);  
       else
         ds1 = tanhDistribution(dsMinTE, dsMax, (nCoarse-1)/2, alphaTE, alphaCoarse);
-      endif
+      end
       ds2 = tanhDistribution(dsMinLE, dsMax, (nCoarse-1)/2, alphaLE, alphaCoarse);     
       ds = [ds1, ds2(end:-1:1)];         
-    endif
+    end
     
     % Perform step with newthon's method 
     f = sum(ds) - dsCoarseSum;
@@ -48,12 +48,12 @@ function [xOut,yOut, sOut, dsOut] = interpolateSurface ( ...
 
     if abs(dsMax - previousDsMax) < 1e-6 
       break
-    endif 
+    end 
 
   end
   if dsMax < 0
     error ('dsMax < 0 - Try lower dsMinLE')
-  endif
+  end
   dsCoarse = ds;
   
   
@@ -61,19 +61,19 @@ function [xOut,yOut, sOut, dsOut] = interpolateSurface ( ...
   % But first, find total arc of airfoil surface 
   dsTotal = 0;
   for i=1:length(x)-1
-    dsTotal += sqrt( (x(i+1)-x(i))^2 + (y(i+1)-y(i))^2 ) ;
+    dsTotal = dsTotal + sqrt( (x(i+1)-x(i))^2 + (y(i+1)-y(i))^2 ) ;
   end
   dsOutSum = dsTotal - dsCoarseSum;
   dsMax = 0.01;
   while true 
-    i +=1;
+    i = i + 1;
         
     % Here number of poins is not nRefined-1 on purpose to make final size be nPoints-1
-    if mod(nRefined,2) != 0 
+    if mod(nRefined,2) ~= 0 
       ds1 = tanhDistribution(dsMinLE, dsMax, (nRefined)/2+1, alphaLE, alphaRefined);    
     else
       ds1 = tanhDistribution(dsMinLE, dsMax, (nRefined)/2, alphaLE, alphaRefined);   
-    endif    
+    end    
     ds2 = tanhDistribution(dsMinTE, dsMax, (nRefined)/2, alphaTE, alphaRefined);     
     ds = [ds1, ds2(end:-1:1)];
     
@@ -82,14 +82,14 @@ function [xOut,yOut, sOut, dsOut] = interpolateSurface ( ...
       previousDsMax = dsMax; 
       previousF = sum(ds) - dsOutSum;   
       dsMax = dsMax - 0.01; 
-      if mod((nRefined),2) != 0 
+      if mod((nRefined),2) ~= 0 
         ds1 = tanhDistribution(dsMinLE, dsMax, (nRefined)/2+1, alphaLE, alphaRefined);    
       else
         ds1 = tanhDistribution(dsMinLE, dsMax, (nRefined)/2, alphaLE, alphaRefined);   
-      endif    
+      end    
       ds2 = tanhDistribution(dsMinTE, dsMax, (nRefined)/2, alphaTE, alphaRefined);     
       ds = [ds1, ds2(end:-1:1)];         
-    endif
+    end
     
     % Newthon's method 
     f = sum(ds) - dsOutSum;
@@ -100,12 +100,12 @@ function [xOut,yOut, sOut, dsOut] = interpolateSurface ( ...
 
     if abs(dsMax - previousDsMax) < 1e-6 
       break
-    endif 
+    end 
 
   end
   if dsMax < 0
     error ('dsMax < 0 - Try lower dsMinLE')
-  endif
+  end
   
   % Calculate refined s from ds 
   dsOut = ds; 
@@ -172,7 +172,7 @@ function [arcSize] = GetSizeOfArc(x, y, xStart, xEnd)
   shouldStartAdding = false;
   for i = 2:n
   
-    # Loop until xStart is surpassed and then start storing arc segments sum 
+    % Loop until xStart is surpassed and then start storing arc segments sum 
     if x(i) < xStart && shouldStartAdding == false   
     
       % Find yStart through weighted average
@@ -180,16 +180,16 @@ function [arcSize] = GetSizeOfArc(x, y, xStart, xEnd)
       arcSize = sqrt( (x(i)-xStart)^2 + (y(i)-yStart)^2 );
       shouldStartAdding = true;
 
-    # Loop until xEnd then get out of loop
+    % Loop until xEnd then get out of loop
     elseif x(i) < xEnd 
       yEnd = (xEnd - x(i-1)) / (x(i)-x(i-1)) * (y(i)-y(i-1)) + y(i-1);
-      arcSize += sqrt( (xEnd-x(i-1))^2 + (yEnd-y(i-1))^2 );
+      arcSize = arcSize + sqrt( (xEnd-x(i-1))^2 + (yEnd-y(i-1))^2 );
       break
     
-    # Summing arcs until xEnd is reached
+    % Summing arcs until xEnd is reached
     elseif shouldStartAdding
-      arcSize += sqrt( (x(i)-x(i-1))^2 + (y(i)-y(i-1))^2 );
-    endif
+      arcSize = arcSize + sqrt( (x(i)-x(i-1))^2 + (y(i)-y(i-1))^2 );
+    end
     
   end
 
