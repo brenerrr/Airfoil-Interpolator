@@ -2,7 +2,7 @@
 function [xOut,yOut, sOut, dsOut] = interpolateSurface ( ...
                                 x, y, nTotal, dsMinTE, dsMinLE, nCoarse, ...
                                 xStartCoarse, xEndCoarse, alphaTE, alphaLE,...
-                                alphaCoarse, alphaRefined )
+                                alphaPressure, alphaSuction )
 
   nRefined = nTotal - nCoarse;
   
@@ -17,77 +17,84 @@ function [xOut,yOut, sOut, dsOut] = interpolateSurface ( ...
   while true 
     i = i + 1;
     if mod(nCoarse-1,2) ~= 0 
-      ds1 = tanhDistribution(dsMinTE, dsMax, (nCoarse-1)/2+1, alphaTE, alphaCoarse);  
+      ds1 = tanhDistribution(dsMinTE, dsMax, (nCoarse-1)/2+1, alphaTE, alphaPressure);  
     else
-      ds1 = tanhDistribution(dsMinTE, dsMax, (nCoarse-1)/2, alphaTE, alphaCoarse);
+      ds1 = tanhDistribution(dsMinTE, dsMax, (nCoarse-1)/2, alphaTE, alphaPressure);
     end
-    ds2 = tanhDistribution(dsMinLE, dsMax, (nCoarse-1)/2, alphaLE, alphaCoarse);     
+    ds2 = tanhDistribution(dsMinLE, dsMax, (nCoarse-1)/2, alphaLE, alphaPressure);     
     ds = [ds1, ds2(end:-1:1)];
-    
+
     % In case this is the first iteration, the next dsMax needs to be guessed 
     if i == 1      
       previousDsMax = dsMax; 
-      previousF = sum(ds) - dsCoarseSum;      
-      dsMax = dsMax*0.9; 
+      previousF = sum(ds) - dsCoarseSum;   
+      dsMax = dsMax*0.999; 
       if mod((nCoarse-1),2) ~= 0 
-        ds1 = tanhDistribution(dsMinTE, dsMax, (nCoarse-1)/2+1, alphaTE, alphaCoarse);  
+        ds1 = tanhDistribution(dsMinTE, dsMax, (nCoarse-1)/2+1, alphaTE, alphaPressure);  
       else
-        ds1 = tanhDistribution(dsMinTE, dsMax, (nCoarse-1)/2, alphaTE, alphaCoarse);
+        ds1 = tanhDistribution(dsMinTE, dsMax, (nCoarse-1)/2, alphaTE, alphaPressure);
       end
-      ds2 = tanhDistribution(dsMinLE, dsMax, (nCoarse-1)/2, alphaLE, alphaCoarse);     
+      ds2 = tanhDistribution(dsMinLE, dsMax, (nCoarse-1)/2, alphaLE, alphaPressure);     
       ds = [ds1, ds2(end:-1:1)];         
     end
+
     
     % Perform step with newthon's method 
-    f = sum(ds) - dsCoarseSum;
-    df = (f - previousF) / (dsMax - previousDsMax);
+    f = sum(ds) - dsCoarseSum;  
+    df = (f - previousF) / (dsMax - previousDsMax);    
     previousDsMax = dsMax;
     dsMax = dsMax - f/df;
     previousF = f; 
-    
 
     if abs(dsMax - previousDsMax) < 1e-6 
       break
-    end 
+    end
+    
+    if isnan(dsMax)
+      error ('dsMax = NaN')
+    end
 
   end
-  if dsMax < 0
-    error ('dsMax < 0 - Try lower dsMinLE')
+  
+  
+
+  if dsMax < 0 
+    error ('dsMax < 0 - Try different dsMinLE or dsMinTE')
   end
   dsCoarse = ds;
   
   
-  % Do the same but know for refined part of airfoil
+  % Do the same but know for suction side of airfoil
   % But first, find total arc of airfoil surface 
   dsTotal = 0;
   for i=1:length(x)-1
     dsTotal = dsTotal + sqrt( (x(i+1)-x(i))^2 + (y(i+1)-y(i))^2 ) ;
   end
   dsOutSum = dsTotal - dsCoarseSum;
-  dsMax = 0.01;
+  dsMax = 0.1;
   while true 
     i = i + 1;
         
     % Here number of poins is not nRefined-1 on purpose to make final size be nPoints-1
     if mod(nRefined,2) ~= 0 
-      ds1 = tanhDistribution(dsMinLE, dsMax, (nRefined)/2+1, alphaLE, alphaRefined);    
+      ds1 = tanhDistribution(dsMinLE, dsMax, (nRefined)/2+1, alphaLE, alphaSuction);    
     else
-      ds1 = tanhDistribution(dsMinLE, dsMax, (nRefined)/2, alphaLE, alphaRefined);   
+      ds1 = tanhDistribution(dsMinLE, dsMax, (nRefined)/2, alphaLE, alphaSuction);   
     end    
-    ds2 = tanhDistribution(dsMinTE, dsMax, (nRefined)/2, alphaTE, alphaRefined);     
+    ds2 = tanhDistribution(dsMinTE, dsMax, (nRefined)/2, alphaTE, alphaSuction);     
     ds = [ds1, ds2(end:-1:1)];
     
     % In case this is the first iteration, the next dsMax needs to be guessed 
     if i == 1      
       previousDsMax = dsMax; 
       previousF = sum(ds) - dsOutSum;   
-      dsMax = dsMax - 0.01; 
+      dsMax = dsMax*0.999; 
       if mod((nRefined),2) ~= 0 
-        ds1 = tanhDistribution(dsMinLE, dsMax, (nRefined)/2+1, alphaLE, alphaRefined);    
+        ds1 = tanhDistribution(dsMinLE, dsMax, (nRefined)/2+1, alphaLE, alphaSuction);    
       else
-        ds1 = tanhDistribution(dsMinLE, dsMax, (nRefined)/2, alphaLE, alphaRefined);   
+        ds1 = tanhDistribution(dsMinLE, dsMax, (nRefined)/2, alphaLE, alphaSuction);   
       end    
-      ds2 = tanhDistribution(dsMinTE, dsMax, (nRefined)/2, alphaTE, alphaRefined);     
+      ds2 = tanhDistribution(dsMinTE, dsMax, (nRefined)/2, alphaTE, alphaSuction);     
       ds = [ds1, ds2(end:-1:1)];         
     end
     
@@ -101,10 +108,15 @@ function [xOut,yOut, sOut, dsOut] = interpolateSurface ( ...
     if abs(dsMax - previousDsMax) < 1e-6 
       break
     end 
+    
+    if isnan(dsMax)
+      error ('dsMax = NaN')
+    endif
 
   end
-  if dsMax < 0
-    error ('dsMax < 0 - Try lower dsMinLE')
+  
+  if dsMax < 0 
+    error ('dsMax < 0 - Try different dsMinLE or dsMinTE')
   end
   
   % Calculate refined s from ds 
@@ -124,8 +136,8 @@ function [xOut,yOut, sOut, dsOut] = interpolateSurface ( ...
   end 
   
   % Calculate coordinates from refined s
-  xOut = interp1(s, x, sOut,'spline');
-  yOut = interp1(s, y, sOut,'spline');
+  xOut = pchip(s, x, sOut);
+  yOut = pchip(s, y, sOut);
   
   dsOut=zeros(length(xOut)-1,1);
   for i = 1:length(xOut)-1
@@ -164,9 +176,10 @@ function [y] = tanhDistribution(minValue, maxValue, nPoints, alpha, beta)
 
 end
 
-% Get size of arc starting at xStart to xEnd (arc is admitted to be in clock wise
+% Get size of arc starting at xStart to xEnd (arc is admitted to be in clock wise)
 function [arcSize] = GetSizeOfArc(x, y, xStart, xEnd)
 
+  [~,iLE] = min(x);
   n = length(x);
   arcSize = 0;
   shouldStartAdding = false;
@@ -180,8 +193,8 @@ function [arcSize] = GetSizeOfArc(x, y, xStart, xEnd)
       arcSize = sqrt( (x(i)-xStart)^2 + (y(i)-yStart)^2 );
       shouldStartAdding = true;
 
-    % Loop until xEnd then get out of loop
-    elseif x(i) < xEnd 
+    % Loop until xEnd or leading edge then get out of loop
+    elseif x(i) < xEnd || i == iLE
       yEnd = (xEnd - x(i-1)) / (x(i)-x(i-1)) * (y(i)-y(i-1)) + y(i-1);
       arcSize = arcSize + sqrt( (xEnd-x(i-1))^2 + (yEnd-y(i-1))^2 );
       break

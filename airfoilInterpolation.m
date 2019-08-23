@@ -7,25 +7,25 @@ clc
 % ******************************************************************************
 
 %% User inputs  
-filename = 'sd7003.dat'; 
-isClockWise = false;         % Points distribution direction 
-startsFromTE =  true;        % true if coordinates start from trailing edge               
+filename = 'surf.dat'; 
+isClockWise = true;         % Points distribution direction 
+startsFromTE =  false;        % true if coordinates start from trailing edge               
 nOut = 441;                  % Final number of points
-percentageSuctionSide = 0.7; % Percentage of points in the suction side surface;
-dsMinLE = 0.0010;            % Minimum distance between points at leading edge
-dsMinTE = 0.00001;           % Minimum distance between points at trailing edge
-xStartCoarse = 0.99;         % Where to start distribution coarsening 
-xEndCoarse = 0.00001;        % Where to end distribution coarsening
-roundFlag = true;            % true if one desires to round trailing edge
+percentageSuctionSide = 0.4; % Percentage of points in the suction side surface;
+dsMinLE = 0.0001600;            % Minimum distance between points at leading edge
+dsMinTE = 0.000059;           % Minimum distance between points at trailing edge
+xStartCoarse = 0.999999999;         % Where to start distribution coarsening 
+xEndCoarse = 0.00000000001;        % Where to end distribution coarsening
+roundFlag = false;            % true if one desires to round trailing edge
 rTE = 0.0008;                % Trailing edge radius (in chord's length) - only required when rounding 
 tip = 1;                     % Higher values stretch trailing edge making it become a tip. Default = 1
-openTE = false;              % true for airfoils without closed trailing edges
+openTE = false;              % true for airfoils with open trailing edges
 
 % Increase these coefficients to concentrate more points in that region (default=1)
 alphaTE = 2;
-alphaLE = 2;
-alphaPressureSide = 1;
-alphaSuctionSide = 1;
+alphaLE = 3;
+alphaPressureSide = 2;
+alphaSuctionSide = 2;
 
 % ******************************************************************************
 % ******************************************************************************
@@ -88,24 +88,22 @@ end
 coordCoarse(:,1) = coordCoarse(:,1) - coordCoarse(iLE,1);
 coordCoarse = coordCoarse / coordCoarse(1,1);
 
-% Rounding
-if (roundFlag == true)
-  
-  nInt = 20001; % Number of points when interpolating airfoil surface 
-  
-  % Add more points to surface to facilitate rounding later 
-  [xOut, yOut, ~, ~] = interpolateSurface ( ...
-                                coordCoarse(:,1), coordCoarse(:,2), nInt, 0.000025, ...
-                                0.000025, round(nInt*0.5), 0.99, xEndCoarse, alphaTE,...
-                                alphaLE, alphaPressureSide, alphaSuctionSide );
-                        
-  % Do it again to make sure everything is smooth                              
-  [xOut, yOut, ~, ~] = interpolateSurface ( ...
-                              xOut, yOut, nInt, 0.000025, ...
+
+nInt = 20001; % Number of points when interpolating airfoil surface 
+% Add more points to surface to facilitate rounding and interpolation later 
+[xOut, yOut, ~, ~] = interpolateSurface ( ...
+                              coordCoarse(:,1), coordCoarse(:,2), nInt, 0.000025, ...
                               0.000025, round(nInt*0.5), 0.99, xEndCoarse, alphaTE,...
                               alphaLE, alphaPressureSide, alphaSuctionSide );
-                  
-                                      
+                      
+% Do it again to make sure everything is smooth                              
+[xOut, yOut, ~, ~] = interpolateSurface ( ...
+                            xOut, yOut, nInt, 0.000025, ...
+                            0.000025, round(nInt*0.5), 0.99, xEndCoarse, alphaTE,...
+                            alphaLE, alphaPressureSide, alphaSuctionSide );
+           
+% Rounding
+if (roundFlag == true)                                  
   % Round trailing edge 
   [xOut,yOut] = roundTE(xOut, yOut, rTE, tip);
 %  [xOut,yOut] = roundTE(coordCoarse(:,1), coordCoarse(:,2), rTE, tip);
@@ -117,8 +115,9 @@ xOut = xOut - xOut(iLE);
 xOut = xOut / xOut(1);
 yOut = yOut / xOut(1);
 
+
 % Distribute points through surface 
-[xOut, yOut, ~, ~] = interpolateSurface ( ...
+[xOut, yOut, sOut, dsOut] = interpolateSurface ( ...
                                 xOut, yOut, nOut, dsMinTE, ...
                                 dsMinLE, nCoarse, xStartCoarse, xEndCoarse, alphaTE,...
                                 alphaLE, alphaPressureSide, alphaSuctionSide );
@@ -135,7 +134,7 @@ xOut = xOut - xOut(iLE);
 xOut = xOut / xOut(1);
 yOut = yOut / xOut(1);
 
-%% Plot
+% Plot
 % Airfoil 
 figure(1);
 hold on 
@@ -149,28 +148,28 @@ legend('Original data', 'Interpolated data')
 set(gcf,'Color','white')
 set(gcf, 'Position',  [100, 100, 800, 800])
 %export_fig airfoil.png 
-
-% X distribution
-figure(2)
-plot(sOut,xOut,'-o')
-hold on
-xlabel('s','FontSize',20)
-ylabel('x','FontSize',20)
-%set(findall(gcf,'-property','FontSize'),'FontSize',20)
-set(gcf,'Color','white')
-set(gcf, 'Position',  [100, 100, 800, 800])
-%export_fig x_distribution.png
-
-% Y distribution
-figure(3)
-plot(sOut,yOut,'-o')
-hold on
-xlabel('s')
-ylabel('y')
-%set(findall(gcf,'-property','FontSize'),'FontSize',20)
-set(gcf,'Color','white')
-set(gcf, 'Position',  [100, 100, 800, 800])
-%export_fig y_distribution.png
+%
+%% X distribution
+%figure(2)
+%plot(sOut,xOut,'-o')
+%hold on
+%xlabel('s','FontSize',20)
+%ylabel('x','FontSize',20)
+%%set(findall(gcf,'-property','FontSize'),'FontSize',20)
+%set(gcf,'Color','white')
+%set(gcf, 'Position',  [100, 100, 800, 800])
+%%export_fig x_distribution.png
+%
+%% Y distribution
+%figure(3)
+%plot(sOut,yOut,'-o')
+%hold on
+%xlabel('s')
+%ylabel('y')
+%%set(findall(gcf,'-property','FontSize'),'FontSize',20)
+%set(gcf,'Color','white')
+%set(gcf, 'Position',  [100, 100, 800, 800])
+%%export_fig y_distribution.png
 
 figure(4)
 plot(sOut(2:end),dsOut,'-o') 
@@ -182,15 +181,15 @@ set(gcf,'Color','white')
 set(gcf, 'Position',  [100, 100, 800, 800])
 %export_fig ds.png
 
-figure(5)
-plot(sOut,'-o') 
-hold on 
-xlabel('Index','fontsize',18)
-ylabel('s')
-%set(findall(gcf,'-property','FontSize'),'FontSize',20)
-set(gcf,'Color','white')
-set(gcf, 'Position',  [100, 100, 800, 800])
-%export_fig s.png
+%figure(5)
+%plot(sOut,'-o') 
+%hold on 
+%xlabel('Index','fontsize',18)
+%ylabel('s')
+%%set(findall(gcf,'-property','FontSize'),'FontSize',20)
+%set(gcf,'Color','white')
+%set(gcf, 'Position',  [100, 100, 800, 800])
+%%export_fig s.png
 
 
 % Make output array start from leading edge and follow clock wise
